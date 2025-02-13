@@ -30,7 +30,7 @@ async function comparePasswords(supplied: string, stored: string) {
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
-    secret: "development-secret",
+    secret: "your-secret-key",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,

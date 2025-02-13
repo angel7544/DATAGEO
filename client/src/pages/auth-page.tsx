@@ -1,15 +1,8 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
-import { insertUserSchema } from "@shared/schema";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -20,22 +13,19 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin } from "lucide-react";
+import { insertUserSchema } from "@shared/schema";
+
+const authSchema = insertUserSchema.extend({
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
 
-  const loginForm = useForm({
-    resolver: zodResolver(insertUserSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
-
-  const registerForm = useForm({
-    resolver: zodResolver(insertUserSchema),
+  const form = useForm<z.infer<typeof authSchema>>({
+    resolver: zodResolver(authSchema),
     defaultValues: {
       username: "",
       password: "",
@@ -47,14 +37,13 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
-      <div className="flex items-center justify-center p-8">
+    <div className="min-h-screen bg-gradient-to-r from-blue-50 to-indigo-50 flex">
+      <div className="flex-1 flex items-center justify-center p-6">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Welcome</CardTitle>
-            <CardDescription>
-              Sign in to manage your GPS points and tasks
-            </CardDescription>
+            <CardTitle className="text-2xl font-bold text-center">
+              Welcome to GPS Manager
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login">
@@ -64,15 +53,13 @@ export default function AuthPage() {
               </TabsList>
 
               <TabsContent value="login">
-                <Form {...loginForm}>
+                <Form {...form}>
                   <form
-                    onSubmit={loginForm.handleSubmit((data) =>
-                      loginMutation.mutate(data)
-                    )}
+                    onSubmit={form.handleSubmit((data) => loginMutation.mutate(data))}
                     className="space-y-4"
                   >
                     <FormField
-                      control={loginForm.control}
+                      control={form.control}
                       name="username"
                       render={({ field }) => (
                         <FormItem>
@@ -85,7 +72,7 @@ export default function AuthPage() {
                       )}
                     />
                     <FormField
-                      control={loginForm.control}
+                      control={form.control}
                       name="password"
                       render={({ field }) => (
                         <FormItem>
@@ -109,15 +96,13 @@ export default function AuthPage() {
               </TabsContent>
 
               <TabsContent value="register">
-                <Form {...registerForm}>
+                <Form {...form}>
                   <form
-                    onSubmit={registerForm.handleSubmit((data) =>
-                      registerMutation.mutate(data)
-                    )}
+                    onSubmit={form.handleSubmit((data) => registerMutation.mutate(data))}
                     className="space-y-4"
                   >
                     <FormField
-                      control={registerForm.control}
+                      control={form.control}
                       name="username"
                       render={({ field }) => (
                         <FormItem>
@@ -130,7 +115,7 @@ export default function AuthPage() {
                       )}
                     />
                     <FormField
-                      control={registerForm.control}
+                      control={form.control}
                       name="password"
                       render={({ field }) => (
                         <FormItem>
@@ -157,16 +142,18 @@ export default function AuthPage() {
         </Card>
       </div>
 
-      <div className="hidden md:flex flex-col justify-center p-8 bg-primary text-primary-foreground">
-        <div className="max-w-md mx-auto">
-          <MapPin className="h-12 w-12 mb-4" />
-          <h1 className="text-4xl font-bold mb-4">
-            GPS Point & Task Management
-          </h1>
-          <p className="text-lg opacity-90">
-            Efficiently manage your GPS points and tasks with our intuitive
-            platform. Track locations, organize tasks, and export data with ease.
+      <div className="hidden lg:flex flex-1 bg-primary items-center justify-center p-12">
+        <div className="max-w-lg text-white">
+          <h1 className="text-4xl font-bold mb-6">GPS Point & Task Management</h1>
+          <p className="text-lg mb-4">
+            Efficiently manage your GPS points and tasks in one place.
           </p>
+          <ul className="space-y-2">
+            <li>• Record GPS points with custom details</li>
+            <li>• Organize tasks with priority levels</li>
+            <li>• Export data to CSV format</li>
+            <li>• Secure user authentication</li>
+          </ul>
         </div>
       </div>
     </div>
