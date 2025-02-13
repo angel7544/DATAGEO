@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -26,6 +26,13 @@ async function comparePasswords(supplied: string, stored: string) {
   const hashedBuf = Buffer.from(hashed, "hex");
   const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
   return timingSafeEqual(hashedBuf, suppliedBuf);
+}
+
+// Middleware to check if user is admin
+export function isAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  if (!req.user.isAdmin) return res.sendStatus(403);
+  next();
 }
 
 export function setupAuth(app: Express) {
@@ -92,5 +99,76 @@ export function setupAuth(app: Express) {
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
+  });
+
+  // Admin Routes
+  app.get("/api/admin/users", isAdmin, async (req, res) => {
+    const users = await storage.getAllUsers();
+    res.json(users);
+  });
+
+  app.post("/api/admin/users", isAdmin, async (req, res) => {
+    const { username, password, isAdmin } = req.body;
+    const existingUser = await storage.getUserByUsername(username);
+    if (existingUser) {
+      return res.status(400).send("Username already exists");
+    }
+
+    const user = await storage.createUser({
+      username,
+      password: await hashPassword(password),
+      isAdmin,
+      createdBy: req.user.id,
+    });
+
+    await storage.createAdminLog(
+      req.user.id,
+      "CREATE_USER",
+      user.id,
+      `Created user ${username} with admin=${isAdmin}`
+    );
+
+    res.status(201).json(user);
+  });
+
+  app.delete("/api/admin/users/:id", isAdmin, async (req, res) => {
+    const userId = parseInt(req.params.id);
+    if (userId === req.user.id) {
+      return res.status(400).send("Cannot delete your own account");
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+
+    await storage.deleteUser(userId);
+    await storage.createAdminLog(
+      req.user.id,
+      "DELETE_USER",
+      userId,
+      `Deleted user ${user.username}`
+    );
+
+    res.sendStatus(200);
+  });
+
+  app.get("/api/admin/logs", isAdmin, async (req, res) => {
+    const logs = await storage.getAdminLogs();
+    res.json(logs);
+  });
+
+  app.get("/api/admin/data", isAdmin, async (req, res) => {
+    const [users, points, tasks] = await Promise.all([
+      storage.getAllUsers(),
+      storage.getAllGpsPoints(),
+      storage.getAllTasks(),
+    ]);
+
+    res.json({
+      users,
+      points,
+      tasks,
+    });
   });
 }
