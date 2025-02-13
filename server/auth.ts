@@ -31,7 +31,14 @@ async function comparePasswords(supplied: string, stored: string) {
 // Middleware to check if user is admin
 export function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated()) return res.sendStatus(401);
-  if (!req.user.isAdmin) return res.sendStatus(403);
+  if (!req.user.isAdmin && !req.user.isSuperAdmin) return res.sendStatus(403);
+  next();
+}
+
+// Middleware to check if user is super admin
+export function isSuperAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  if (!req.user.isSuperAdmin) return res.sendStatus(403);
   next();
 }
 
@@ -107,8 +114,42 @@ export function setupAuth(app: Express) {
     res.json(users);
   });
 
+  // Special route to create the first super admin if none exists
+  app.post("/api/setup-super-admin", async (req, res) => {
+    const users = await storage.getAllUsers();
+    if (users.length > 0) {
+      return res.status(403).send("Super admin can only be created when there are no existing users");
+    }
+
+    const { username, password } = req.body;
+    const existingUser = await storage.getUserByUsername(username);
+    if (existingUser) {
+      return res.status(400).send("Username already exists");
+    }
+
+    const user = await storage.createUser({
+      username,
+      password: await hashPassword(password),
+      isAdmin: true,
+      isSuperAdmin: true,
+    });
+
+    req.login(user, (err) => {
+      if (err) return res.status(500).send(err); //Error handling improved
+      res.status(201).json(user);
+    });
+  });
+
+
+  // Update existing admin routes to check for super admin status
   app.post("/api/admin/users", isAdmin, async (req, res) => {
     const { username, password, isAdmin } = req.body;
+
+    // Only super admin can create admin users
+    if (isAdmin && !req.user.isSuperAdmin) {
+      return res.status(403).send("Only super admin can create admin users");
+    }
+
     const existingUser = await storage.getUserByUsername(username);
     if (existingUser) {
       return res.status(400).send("Username already exists");
@@ -118,6 +159,7 @@ export function setupAuth(app: Express) {
       username,
       password: await hashPassword(password),
       isAdmin,
+      isSuperAdmin: false, // Only the first user can be super admin
       createdBy: req.user.id,
     });
 
@@ -133,13 +175,20 @@ export function setupAuth(app: Express) {
 
   app.delete("/api/admin/users/:id", isAdmin, async (req, res) => {
     const userId = parseInt(req.params.id);
-    if (userId === req.user.id) {
-      return res.status(400).send("Cannot delete your own account");
+    const targetUser = await storage.getUser(userId);
+
+    if (!targetUser) {
+      return res.status(404).send("User not found");
     }
 
-    const user = await storage.getUser(userId);
-    if (!user) {
-      return res.status(404).send("User not found");
+    // Only super admin can delete admin users
+    if (targetUser.isAdmin && !req.user.isSuperAdmin) {
+      return res.status(403).send("Only super admin can delete admin users");
+    }
+
+    // Cannot delete your own account or other super admins
+    if (userId === req.user.id || targetUser.isSuperAdmin) {
+      return res.status(400).send("Cannot delete this user");
     }
 
     await storage.deleteUser(userId);
@@ -147,7 +196,7 @@ export function setupAuth(app: Express) {
       req.user.id,
       "DELETE_USER",
       userId,
-      `Deleted user ${user.username}`
+      `Deleted user ${targetUser.username}`
     );
 
     res.sendStatus(200);

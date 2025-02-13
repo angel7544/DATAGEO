@@ -15,10 +15,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import CreateUserForm from "@/components/create-user-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/hooks/use-auth"; // Fix import path
 
 export default function AdminPage() {
   const { toast } = useToast();
-  
+  const { user } = useAuth();
+
   const { data: adminData, isLoading } = useQuery<{
     users: User[];
     points: GpsPoint[];
@@ -62,8 +64,13 @@ export default function AdminPage() {
 
   return (
     <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-3xl font-bold">
+          {user?.isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard'}
+        </h1>
+        <Badge variant="secondary" className="text-sm">
+          {user?.isSuperAdmin ? 'Super Admin' : 'Admin'}
+        </Badge>
       </div>
 
       <Tabs defaultValue="users">
@@ -77,46 +84,53 @@ export default function AdminPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>User Management</CardTitle>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Create User
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create New User</DialogTitle>
-                  </DialogHeader>
-                  <CreateUserForm />
-                </DialogContent>
-              </Dialog>
+              {user?.isSuperAdmin && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Create User
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create New User</DialogTitle>
+                    </DialogHeader>
+                    <CreateUserForm allowAdminCreation={user?.isSuperAdmin} />
+                  </DialogContent>
+                </Dialog>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {adminData?.users.map((user) => (
-                  <Card key={user.id}>
+                {adminData?.users.map((u) => (
+                  <Card key={u.id}>
                     <CardContent className="pt-6">
                       <div className="flex justify-between items-center">
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{user.username}</h3>
-                            {user.isAdmin && (
+                            <h3 className="font-semibold">{u.username}</h3>
+                            {u.isSuperAdmin && (
+                              <Badge>Super Admin</Badge>
+                            )}
+                            {u.isAdmin && !u.isSuperAdmin && (
                               <Badge variant="secondary">Admin</Badge>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Created: {new Date(user.createdAt).toLocaleDateString()}
+                            Created: {new Date(u.createdAt!).toLocaleDateString()}
                           </p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteUserMutation.mutate(user.id)}
-                          disabled={deleteUserMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {((user?.isSuperAdmin && !u.isSuperAdmin) || (!user?.isSuperAdmin && !u.isAdmin)) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteUserMutation.mutate(u.id)}
+                            disabled={deleteUserMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

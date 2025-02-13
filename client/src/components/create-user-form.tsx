@@ -25,7 +25,11 @@ const formSchema = insertUserSchema.extend({
 
 type FormData = z.infer<typeof formSchema>;
 
-export default function CreateUserForm() {
+interface CreateUserFormProps {
+  allowAdminCreation?: boolean;
+}
+
+export default function CreateUserForm({ allowAdminCreation }: CreateUserFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -91,22 +95,24 @@ export default function CreateUserForm() {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="isAdmin"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <FormLabel>Make this user an admin</FormLabel>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {allowAdminCreation && (
+          <FormField
+            control={form.control}
+            name="isAdmin"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel>Make this user an admin</FormLabel>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? (
