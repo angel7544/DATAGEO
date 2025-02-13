@@ -1,31 +1,3 @@
-# GPS Point & Task Management System
-
-A web-based application for managing GPS points and tasks with user authentication.
-
-## Features
-
-- User Authentication (Login/Register)
-- GPS Point Management
-  - Add GPS points with AP Name and description
-  - Export points to CSV
-  - Get current location feature
-- Task Management
-  - Create tasks with priority levels
-  - Mark tasks as complete/incomplete
-  - Delete tasks
-- Data Export Capabilities
-- Secure user sessions
-
-## Prerequisites
-
-- Node.js (v20 or later)
-- npm (Node Package Manager)
-- MongoDB Atlas account (for database)
-
-## Installation
-
-1. Clone the repository:
-```bash
 git clone <repository-url>
 cd gps-task-manager
 ```
@@ -69,10 +41,12 @@ Create a `.env` file in the root directory:
 ```env
 # MongoDB Connection
 MONGODB_URI=your_mongodb_connection_string
-# Replace <password> with your database user password
 
 # Session Secret
 SESSION_SECRET=your_session_secret
+
+# Frontend URL (CORS)
+FRONTEND_URL=https://your-frontend-url.vercel.app
 ```
 
 ## Converting to MongoDB Storage
@@ -126,3 +100,78 @@ npm run dev
 - Session management with express-session
 - CSRF protection
 - Rate limiting on API routes
+
+## Deployment
+
+### Frontend Deployment (Vercel)
+
+1. Create a Vercel account at [vercel.com](https://vercel.com)
+
+2. Install Vercel CLI:
+```bash
+npm install -g vercel
+```
+
+3. Build the frontend:
+```bash
+npm run build
+```
+
+4. Deploy to Vercel:
+```bash
+vercel
+```
+
+Follow the prompts to complete the deployment.
+
+### Frontend Deployment (Netlify)
+
+1. Create a Netlify account at [netlify.com](https://netlify.com)
+
+2. Install Netlify CLI:
+```bash
+npm install -g netlify-cli
+```
+
+3. Build the frontend:
+```bash
+npm run build
+```
+
+4. Deploy to Netlify:
+```bash
+netlify deploy
+```
+
+Follow the prompts and specify `dist/public` as your publish directory.
+
+### Backend Deployment
+
+Since this is a full-stack application, you'll need to deploy the backend separately. Here are some recommended platforms:
+
+1. Railway (recommended):
+   - Go to [railway.app](https://railway.app)
+   - Connect your GitHub repository
+   - Railway will automatically detect your Node.js application
+   - Set your environment variables in the Railway dashboard
+
+2. Render:
+   - Visit [render.com](https://render.com)
+   - Create a new Web Service
+   - Connect your repository
+   - Set the build command to `npm install && npm run build`
+   - Set the start command to `npm start`
+
+### Environment Variables
+
+Make sure to set these environment variables in your deployment platform:
+
+```env
+# MongoDB Connection
+MONGODB_URI=your_mongodb_connection_string
+
+# Session Secret
+SESSION_SECRET=your_session_secret
+
+# Frontend URL (CORS)
+FRONTEND_URL=https://your-frontend-url.vercel.app
